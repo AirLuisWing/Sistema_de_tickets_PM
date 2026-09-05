@@ -1,0 +1,135 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id               Int               @id @default(autoincrement())
+  nombre           String
+  email            String            @unique
+  password         String
+  rol              String            // "UsuarioFinal", "Tecnico", "Supervisor", "Administrador"
+  fotoPerfil       String?
+  area             String?
+  
+  // NUEVO: BORRADO LÓGICO
+  activo           Boolean           @default(true)
+
+
+  // NUEVO: SEGURIDAD Y BLOQUEO DE CUENTA
+  intentosFallidos Int               @default(0)
+  bloqueadoHasta   DateTime?
+  
+  ticketsCreados   Ticket[]          @relation("Solicitante")
+
+  ticketsAsignados Ticket[]          @relation("TecnicosAsignados")
+  comentarios      Comentario[]
+  
+  historialAcciones HistorialTicket[] 
+  bitacoraAcciones  Bitacora[]        
+  adjuntosSubidos   Adjunto[]
+}
+
+model Ticket {
+  id                   Int               @id @default(autoincrement())
+  folio                String?           @unique 
+  titulo               String            @default("Sin título")
+  fechaCreacion        DateTime          @default(now())
+  fechaLimiteSLA       DateTime?
+  fechaCierre          DateTime?
+  
+  solicitanteId        Int
+  solicitante          Usuario           @relation("Solicitante", fields: [solicitanteId], references: [id])
+  
+  descripcion          String            @db.Text
+  equipoAfectado       String?
+  tipo                 String            
+  categoria            String
+  subcategoria         String?
+  prioridad            String            
+  nivelImpacto         String?
+  estado               String            @default("Nuevo") 
+  
+  // ACTUALIZADO: Un ticket ahora puede tener una lista de técnicos
+  tecnicos             Usuario[]         @relation("TecnicosAsignados")
+  departamentoAsignado String?
+  
+  descripcionSolucion  String?           @db.Text
+  motivoCierre         String?
+  satisfaccion         Int?
+
+  // NUEVO: FIRMA DIGITAL DE CONFORMIDAD
+  conformidadUsuario   Boolean           @default(false)
+  fechaConformidad     DateTime?              
+  
+  comentarios          Comentario[]
+  adjuntos             Adjunto[]
+  historial            HistorialTicket[] 
+
+  // NUEVO: ÍNDICES DE OPTIMIZACIÓN (Búsquedas ultra rápidas)
+  @@index([estado])
+  @@index([prioridad])
+  @@index([fechaCreacion])
+  @@index([folio])
+}
+
+model Comentario {
+  id          Int      @id @default(autoincrement())
+  texto       String   @db.Text
+  fecha       DateTime @default(now())
+  
+  ticketId    Int
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  autorId     Int
+  autor       Usuario  @relation(fields: [autorId], references: [id])
+}
+
+model Adjunto {
+  id          Int      @id @default(autoincrement())
+  rutaArchivo String   
+  nombre      String
+  fecha       DateTime @default(now()) // NUEVO: Fecha en que se subió
+  
+  ticketId    Int
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  subidoPorId Int?     // NUEVO: Quién subió el archivo
+  subidoPor   Usuario? @relation(fields: [subidoPorId], references: [id])
+}
+
+// ==========================================
+// NUEVAS TABLAS PARA AUDITORÍA Y CONTROL
+// ==========================================
+
+model HistorialTicket {
+  id          Int      @id @default(autoincrement())
+  accion      String   // Ej: "Cambio de estado", "Asignación", "Nota agregada"
+  detalles    String?  @db.Text // Ej: "El estado cambió de Nuevo a En proceso"
+  fecha       DateTime @default(now())
+
+  ticketId    Int
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+}
+
+model Bitacora {
+  id          Int      @id @default(autoincrement())
+  accion      String   // Ej: "Inicio de sesión", "Creó usuario", "Eliminó ticket"
+  modulo      String   // Ej: "Autenticación", "Directorio", "Tickets"
+  detalles    String?  @db.Text
+  fecha       DateTime @default(now())
+
+  usuarioId   Int
+  usuario     Usuario  @relation(fields: [usuarioId], references: [id])
+
+  // NUEVO: ÍNDICES PARA LA BITÁCORA
+  @@index([fecha])
+  @@index([modulo])
+}

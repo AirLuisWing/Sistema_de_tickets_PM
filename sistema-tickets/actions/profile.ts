@@ -1,0 +1,114 @@
+'use server'
+
+import { prisma } from "@/lib/prisma"
+import bcrypt from "bcryptjs"
+import { revalidatePath } from "next/cache"
+import { obtenerSesion } from "@/lib/session"
+import { registrarBitacora } from "./audit"
+import { writeFile, mkdir } from "fs/promises"
+import path from "path"
+
+export async function cambiarPassword(formData: FormData) {
+  const actual = formData.get("passwordActual") as string
+  const nueva = formData.get("passwordNueva") as string
+  const confirmar = formData.get("passwordConfirmar") as string
+
+  if (!actual || !nueva || !confirmar) return { error: "Completa todos los campos." }
+  if (nueva !== confirmar) return { error: "Las contraseñas no coinciden." }
+  if (nueva.length < 6) return { error: "La contraseña debe tener al menos 6 caracteres." }
+
+  try {
+    const sesion = await obtenerSesion()
+    if (!sesion) return { error: "Sesión no válida." }
+
+    const usuario = await prisma.usuario.findUnique({ where: { id: sesion.userId } })
+    if (!usuario) return { error: "Usuario no encontrado." }
+
+    const passwordValida = await bcrypt.compare(actual, usuario.password)
+    if (!passwordValida) return { error: "La contraseña actual es incorrecta." }
+
+    const hashedPassword = await bcrypt.hash(nueva, 10)
+    await prisma.usuario.update({
+      where: { id: usuario.id },
+      data: { password: hashedPassword }
+    })
+
+    await registrarBitacora("Cambio de contraseña", "Perfil", `El usuario actualizó su contraseña.`, sesion.userId)
+    return { success: "¡Contraseña actualizada correctamente!" }
+  } catch (error) {
+    return { error: "Error interno al actualizar la contraseña." }
+  }
+}
+
+export async function actualizarPerfil(formData: FormData) {
+  const area = formData.get("area") as string
+  if (!area) return { error: "El área no puede estar vacía." }
+
+  try {
+    const sesion = await obtenerSesion()
+    if (!sesion) return { error: "Sesión no válida." }
+
+    await prisma.usuario.update({
+      where: { id: sesion.userId },
+      data: { area: area }
+    })
+    return { success: "¡Área actualizada correctamente!" }
+  } catch (error) {
+    return { error: "Error interno al actualizar el perfil." }
+  }
+}
+
+export async function actualizarFotoPerfil(formData: FormData) {
+  const archivo = formData.get("foto") as File
+  const sesion = await obtenerSesion()
+
+  if (!sesion) return { error: "Tu sesión ha expirado." }
+  if (!archivo || archivo.size === 0) return { error: "No seleccionaste ninguna imagen." }
+
+  const permitidos = ['image/jpeg', 'image/png', 'image/webp']
+  if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Usa JPG, PNG o WEBP." }
+  
+  try {
+    const bytes = await archivo.arrayBuffer()
+    const buffer = Buffer.from(bytes)
+    const extension = archivo.name.split('.').pop()
+    const nombreSeguro = `avatar_${sesion.userId}_${Date.now()}.${extension}`
+    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
+    
+    try { await mkdir(uploadDir, { recursive: true }) } catch(e){}
+
+    const filePath = path.join(uploadDir, nombreSeguro)
+    await writeFile(filePath, buffer)
+
+    await prisma.usuario.update({
+      where: { id: sesion.userId },
+      data: { fotoPerfil: `/uploads/avatars/${nombreSeguro}` }
+    })
+
+    await registrarBitacora("Actualizó foto", "Perfil", "El usuario actualizó su foto de perfil.", sesion.userId)
+  } catch (error) {
+    return { error: "Error en el servidor al intentar guardar la imagen." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/perfil")
+}
+
+export async function eliminarFotoPerfil() {
+  const sesion = await obtenerSesion()
+  if (!sesion) return { error: "Tu sesión ha expirado." }
+
+  try {
+    await prisma.usuario.update({
+      where: { id: sesion.userId },
+      data: { fotoPerfil: null } 
+    })
+    await registrarBitacora("Eliminó foto", "Perfil", "El usuario eliminó su foto de perfil.", sesion.userId)
+  } catch (error) {
+    return { error: "Error interno al intentar eliminar la foto." }
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/dashboard/perfil")
+  return { success: true }
+}
