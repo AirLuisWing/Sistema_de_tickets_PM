@@ -9,14 +9,12 @@ export default async function PanelGlobalPage() {
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
 
-  // CANDADO: Solo Jefes pueden ver el directorio global
-  if (sesion.rol !== "Administrador" && sesion.rol !== "Supervisor") {
-    redirect("/dashboard/tickets")
-  }
-
-  // Traemos TODOS los tickets de la base de datos
+  // 🛡️ CORRECCIÓN DATA LEAK: Traemos los tickets asegurando no incluir contraseñas
   const tickets = await prisma.ticket.findMany({
-    include: { solicitante: true, tecnicos: true },
+    include: { 
+      solicitante: { select: { id: true, nombre: true, area: true, email: true } }, 
+      tecnicos: { select: { id: true, nombre: true, area: true } } 
+    },
     orderBy: { fechaCreacion: 'desc' }
   })
 
@@ -31,7 +29,6 @@ export default async function PanelGlobalPage() {
         </p>
       </div>
 
-      {/* Reutilizamos tu tabla, que ya tiene los nuevos filtros */}
       <TablaTickets tickets={ticketsFormateados} vistaGlobal={true} />
     </div>
   )

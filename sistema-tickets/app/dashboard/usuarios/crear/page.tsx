@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { ShieldAlert, ShieldCheck, User, Wrench, AlertCircle } from "lucide-react"
-import { registrarUsuario } from "@/app/actions" 
+import { registrarUsuario } from "@/actions/users" 
 
 export default function CrearUsuarioPage() {
   const [mensajeError, setMensajeError] = useState<string | null>(null)

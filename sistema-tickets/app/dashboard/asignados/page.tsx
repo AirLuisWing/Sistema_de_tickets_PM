@@ -12,19 +12,16 @@ export default async function AsignadosPage() {
     redirect("/")
   }
 
-  if (sesion.rol === "UsuarioFinal") {
-    redirect("/dashboard/tickets")
-  }
-
   const esTecnico = sesion.rol === "Tecnico"
   
+  // 🛡️ CORRECCIÓN DATA LEAK
   const ticketsAsignados = await prisma.ticket.findMany({
     where: esTecnico 
       ? { tecnicos: { some: { id: sesion.userId } } } 
       : { tecnicos: { some: {} } }, 
     include: { 
-      solicitante: true, 
-      tecnicos: true 
+      solicitante: { select: { id: true, nombre: true, area: true, email: true } }, 
+      tecnicos: { select: { id: true, nombre: true, area: true } } 
     },
     orderBy: { fechaCreacion: 'desc' }
   })

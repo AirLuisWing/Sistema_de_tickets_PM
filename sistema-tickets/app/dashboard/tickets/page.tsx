@@ -9,10 +9,13 @@ export default async function TicketsPage() {
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
 
-  // AHORA ESTA PANTALLA ES ESTRICTAMENTE "MIS TICKETS CREADOS" PARA TODOS
+  // 🛡️ CORRECCIÓN DATA LEAK
   const tickets = await prisma.ticket.findMany({
     where: { solicitanteId: sesion.userId },
-    include: { solicitante: true, tecnicos: true }, 
+    include: { 
+      solicitante: { select: { id: true, nombre: true, area: true, email: true } }, 
+      tecnicos: { select: { id: true, nombre: true, area: true } } 
+    }, 
     orderBy: { fechaCreacion: 'desc' }
   })
 

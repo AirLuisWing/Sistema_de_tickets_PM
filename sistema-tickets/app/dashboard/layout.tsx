@@ -144,7 +144,6 @@ export default async function DashboardLayout({
                   <p className="text-sm font-bold text-slate-900 dark:text-white leading-none">{nombreCorto}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{rol}</p>
                 </div>
-                {/* ESTA ES LA PARTE ARREGLADA */}
                 <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-700 shadow-sm">
                   {usuarioDB?.fotoPerfil && (
                     <AvatarImage alt={nombreCorto} className="object-cover" src={usuarioDB.fotoPerfil} />

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, CheckCircle2, Loader2, Save } from "lucide-react"
-import { actualizarPerfil } from "@/app/actions"
+import { actualizarPerfil } from "@/actions/profile"
 
 export default function FormularioPerfil({ areaActual }: { areaActual: string }) {
   const [error, setError] = useState<string | null>(null)

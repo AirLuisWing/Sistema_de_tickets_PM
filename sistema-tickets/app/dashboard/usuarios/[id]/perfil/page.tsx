@@ -5,16 +5,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Mail, Briefcase, ShieldCheck, User as UserIcon, CheckCircle2, Clock, FileText } from "lucide-react"
 import Link from "next/link"
-import { redirect } from "next/navigation"
 
 export const dynamic = 'force-dynamic'
 
 export default async function PerfilUsuarioAdminPage({ params }: { params: Promise<{ id: string }> }) {
   const sesion = await obtenerSesion()
   
-  if (!sesion || (sesion.rol !== "Administrador" && sesion.rol !== "Supervisor")) {
-    redirect("/dashboard/tickets")
-  }
+  // ELIMINADA VALIDACIÓN MANUAL DE ROL "Administrador" o "Supervisor" - El middleware ahora lo maneja
 
   const { id } = await params
   
@@ -33,7 +30,6 @@ export default async function PerfilUsuarioAdminPage({ params }: { params: Promi
   let estadisticas = { resueltos: 0, pendientes: 0, totalTramitados: 0 }
   let ultimosTickets = []
 
-  // CORRECCIÓN: Ahora buscamos dentro de la lista de técnicos (many-to-many)
   if (esTecnico) {
     estadisticas.resueltos = await prisma.ticket.count({ where: { tecnicos: { some: { id: usuario.id } }, estado: "Resuelto" } })
     estadisticas.pendientes = await prisma.ticket.count({ where: { tecnicos: { some: { id: usuario.id } }, estado: { not: "Resuelto" } } })
@@ -69,7 +65,6 @@ export default async function PerfilUsuarioAdminPage({ params }: { params: Promi
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        {/* COLUMNA IZQUIERDA: IDENTIDAD Y MÉTRICAS */}
         <div className="lg:col-span-1 space-y-6">
           <Card className="border-t-4 border-t-slate-800 dark:bg-slate-900 dark:border-x-slate-800 dark:border-b-slate-800 shadow-sm">
             <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
@@ -115,7 +110,6 @@ export default async function PerfilUsuarioAdminPage({ params }: { params: Promi
           </Card>
         </div>
 
-        {/* COLUMNA DERECHA: DATOS Y ACTIVIDAD RECIENTE */}
         <div className="lg:col-span-2 space-y-6">
           
           <Card className="shadow-sm dark:bg-slate-900 dark:border-slate-800">

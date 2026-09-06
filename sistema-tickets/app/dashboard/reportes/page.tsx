@@ -14,9 +14,7 @@ export default async function ReportesSLAPage({ searchParams }: { searchParams: 
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
   
-  if (sesion.rol !== "Administrador" && sesion.rol !== "Supervisor") {
-    redirect("/dashboard/tickets")
-  }
+  // ELIMINADA VALIDACIÓN MANUAL DE ROL "Administrador" o "Supervisor" - El middleware ahora lo maneja
 
   const resolvedParams = await searchParams
   const filtro = resolvedParams.filtro || "mes"

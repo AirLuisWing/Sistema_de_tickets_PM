@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { AlertCircle, CheckCircle2, KeyRound, Loader2 } from "lucide-react"
-import { cambiarPassword } from "@/app/actions"
+import { cambiarPassword } from "@/actions/profile"
 
 export default function FormularioPassword() {
   const [error, setError] = useState<string | null>(null)

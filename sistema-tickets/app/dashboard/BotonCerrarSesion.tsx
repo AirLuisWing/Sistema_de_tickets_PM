@@ -1,7 +1,7 @@
 "use client"
 
 import { LogOut } from "lucide-react"
-import { cerrarSesion } from "@/app/aaaactions"
+import { cerrarSesion } from "@/actions/auth"
 
 export default function BotonCerrarSesion() {
   return (

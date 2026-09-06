@@ -1,8 +1,8 @@
-"import client"
+"use client"
 
 import BotonConfirmacion from "@/components/BotonConfirmacion"
-import FormAccion from "@/components/FormAccion" // <-- IMPORTAMOS NUESTRO ESCUDO
-import { eliminarUsuario } from "@/app/actions"
+import FormAccion from "@/components/FormAccion" 
+import { eliminarUsuario } from "@/actions/users"
 
 export default function BotonEliminar({ id, nombre }: { id: number, nombre: string }) {
   return (

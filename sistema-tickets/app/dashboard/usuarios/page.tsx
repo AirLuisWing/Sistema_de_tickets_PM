@@ -2,25 +2,24 @@ import { prisma } from "@/lib/prisma"
 import { obtenerSesion } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserPlus, ShieldAlert, ShieldCheck, Wrench, User, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, UserPlus, ShieldAlert, ShieldCheck, Wrench, User } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import BotonEliminar from "./BotonEliminar"
 import Link from "next/link"
+import ControlesPaginacion from "@/components/ControlesPaginacion"
 
 export const dynamic = 'force-dynamic'
 
-export default async function UsuariosPage({ searchParams }: { searchParams: Promise<{ buscar?: string, pagina?: string }> }) {
+export default async function UsuariosPage({ searchParams }: { searchParams: Promise<{ buscar?: string, pagina?: string, limite?: string }> }) {
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
-  if (sesion.rol !== "Administrador" && sesion.rol !== "Supervisor") redirect("/dashboard/tickets")
 
   const esAdmin = sesion.rol === "Administrador"
 
   const resolvedParams = await searchParams
   const buscar = resolvedParams.buscar || ""
   const paginaActual = Number(resolvedParams.pagina) || 1
-  const ITEMS_POR_PAGINA = 15
+  const ITEMS_POR_PAGINA = Number(resolvedParams.limite) || 10
 
   const whereClause = buscar ? {
     OR: [ { nombre: { contains: buscar } }, { area: { contains: buscar } } ]
@@ -29,8 +28,10 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
   const totalUsuarios = await prisma.usuario.count({ where: whereClause })
   const totalPaginas = Math.ceil(totalUsuarios / ITEMS_POR_PAGINA)
 
+  // 🛡️ CORRECCIÓN DATA LEAK: Select estricto, evita mandar contraseñas a la vista
   const usuarios = await prisma.usuario.findMany({
     where: whereClause,
+    select: { id: true, nombre: true, area: true, rol: true, email: true },
     orderBy: { nombre: 'asc' },
     skip: (paginaActual - 1) * ITEMS_POR_PAGINA,
     take: ITEMS_POR_PAGINA
@@ -72,7 +73,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
             </form>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0 pb-4">
           <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
               <thead className="text-xs text-slate-700 dark:text-slate-400 uppercase bg-slate-50 dark:bg-slate-950 border-y border-slate-200 dark:border-slate-800">
@@ -109,22 +110,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
               </tbody>
             </table>
           </div>
-
-          {totalPaginas > 1 && (
-            <div className="flex items-center justify-between border-t border-slate-200 dark:border-slate-800 pt-4 mt-4">
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Página <span className="font-bold text-slate-900 dark:text-white">{paginaActual}</span> de <span className="font-bold text-slate-900 dark:text-white">{totalPaginas}</span>
-              </p>
-              <div className="flex gap-2">
-                <Link href={`/dashboard/usuarios?buscar=${buscar}&pagina=${Math.max(1, paginaActual - 1)}`}>
-                  <Button variant="outline" size="sm" disabled={paginaActual === 1} className="font-bold dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-transparent"><ChevronLeft className="h-4 w-4 mr-1" /> Anterior</Button>
-                </Link>
-                <Link href={`/dashboard/usuarios?buscar=${buscar}&pagina=${Math.min(totalPaginas, paginaActual + 1)}`}>
-                  <Button variant="outline" size="sm" disabled={paginaActual === totalPaginas} className="font-bold dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-transparent">Siguiente <ChevronRight className="h-4 w-4 ml-1" /></Button>
-                </Link>
-              </div>
-            </div>
-          )}
+          <ControlesPaginacion paginaActual={paginaActual} totalPaginas={totalPaginas} rutaBase="/dashboard/usuarios" />
         </CardContent>
       </Card>
     </div>

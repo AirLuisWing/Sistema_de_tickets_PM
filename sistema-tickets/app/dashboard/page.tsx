@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { obtenerSesion } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,15 +14,11 @@ export default async function DashboardPrincipalPage({ searchParams }: { searchP
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
   
-  if (sesion.rol === "UsuarioFinal") {
-    redirect("/dashboard/tickets")
-  }
-
   const resolvedParams = await searchParams
   const filtro = resolvedParams.filtro || "mes"
   const fechaEspecifica = resolvedParams.fecha
 
-  let whereClause: any = {}
+  let whereClause: Prisma.TicketWhereInput = {}
   let textoFiltro = filtro
 
   if (fechaEspecifica) {
@@ -105,7 +102,6 @@ export default async function DashboardPrincipalPage({ searchParams }: { searchP
     <div className="p-8 max-w-7xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b dark:border-slate-800 pb-4">
         <div>
-          {/* dark:text-white para que brille en la oscuridad */}
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Bienvenido al panel de TICs</h1>
           <p className="text-slate-500 dark:text-slate-400 mt-1">Resumen general del estado de los servicios.</p>
         </div>
@@ -142,7 +138,6 @@ export default async function DashboardPrincipalPage({ searchParams }: { searchP
             <TicketIcon className="h-5 w-5 text-blue-500" />
           </CardHeader>
           <CardContent>
-            {/* dark:text-white para los números */}
             <div className="text-3xl font-bold text-slate-900 dark:text-white">{ticketsAbiertos}</div>
           </CardContent>
         </Card>

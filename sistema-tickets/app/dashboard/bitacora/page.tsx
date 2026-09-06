@@ -1,26 +1,28 @@
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
 import { obtenerSesion } from "@/lib/session"
 import { redirect } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ShieldAlert, Activity, User, Ticket as TicketIcon, LogIn, Settings, Clock, ChevronLeft, ChevronRight } from "lucide-react"
+import { ShieldAlert, Activity, User, Ticket as TicketIcon, LogIn, Settings, Clock } from "lucide-react"
 import FiltroBitacora from "./FiltroBitacora"
 import AutoRefresh from "@/components/AutoRefresh"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
+import ControlesPaginacion from "@/components/ControlesPaginacion" // <-- IMPORTAMOS EL NUEVO COMPONENTE
 
 export const dynamic = 'force-dynamic'
 
-export default async function BitacoraPage({ searchParams }: { searchParams: Promise<{ filtro?: string, fecha?: string, pagina?: string }> }) {
+export default async function BitacoraPage({ searchParams }: { searchParams: Promise<{ filtro?: string, fecha?: string, pagina?: string, limite?: string }> }) {
   const sesion = await obtenerSesion()
-  if (!sesion || (sesion.rol !== "Administrador" && sesion.rol !== "Supervisor")) redirect("/dashboard")
+  if (!sesion) redirect("/")
 
   const resolvedParams = await searchParams
   const filtro = resolvedParams.filtro || "mes"
   const fechaEspecifica = resolvedParams.fecha
   const paginaActual = Number(resolvedParams.pagina) || 1
-  const ITEMS_POR_PAGINA = 50
+  
+  // CAPTURAMOS EL LÍMITE DESDE LA URL (Por defecto 10)
+  const ITEMS_POR_PAGINA = Number(resolvedParams.limite) || 10
 
-  let whereClause: any = {}
+  let whereClause: Prisma.BitacoraWhereInput = {}
 
   if (fechaEspecifica) {
     if (fechaEspecifica.length === 10) { 
@@ -100,8 +102,8 @@ export default async function BitacoraPage({ searchParams }: { searchParams: Pro
             <CardDescription className="dark:text-slate-400">Mostrando {registros.length} de {totalRegistros} eventos.</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto min-h-[500px]">
+        <CardContent className="p-0 pb-4">
+          <div className="overflow-x-auto min-h-[400px]">
             <table className="w-full text-sm text-left text-slate-600 dark:text-slate-300">
               <thead className="text-xs text-slate-700 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800">
                 <tr>
@@ -146,21 +148,13 @@ export default async function BitacoraPage({ searchParams }: { searchParams: Pro
             </table>
           </div>
 
-          {totalPaginas > 1 && (
-            <div className="p-4 flex items-center justify-between border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 rounded-b-xl">
-              <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">
-                Página <span className="font-bold text-slate-900 dark:text-white">{paginaActual}</span> de <span className="font-bold text-slate-900 dark:text-white">{totalPaginas}</span>
-              </p>
-              <div className="flex gap-2">
-                <Link href={`/dashboard/bitacora?filtro=${filtro}&fecha=${fechaEspecifica || ''}&pagina=${Math.max(1, paginaActual - 1)}`}>
-                  <Button variant="outline" size="sm" disabled={paginaActual === 1} className="font-bold dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-transparent"><ChevronLeft className="h-4 w-4 mr-1" /> Anterior</Button>
-                </Link>
-                <Link href={`/dashboard/bitacora?filtro=${filtro}&fecha=${fechaEspecifica || ''}&pagina=${Math.min(totalPaginas, paginaActual + 1)}`}>
-                  <Button variant="outline" size="sm" disabled={paginaActual === totalPaginas} className="font-bold dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800 dark:bg-transparent">Siguiente <ChevronRight className="h-4 w-4 ml-1" /></Button>
-                </Link>
-              </div>
-            </div>
-          )}
+          {/* INYECTAMOS LOS CONTROLES DINÁMICOS AQUÍ */}
+          <ControlesPaginacion 
+            paginaActual={paginaActual} 
+            totalPaginas={totalPaginas} 
+            rutaBase="/dashboard/bitacora" 
+          />
+
         </CardContent>
       </Card>
     </div>

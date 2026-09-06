@@ -2,9 +2,9 @@
 
 import { prisma } from "@/lib/prisma"
 import bcrypt from "bcryptjs"
-import { redirect } from "next/navigation" 
 import { crearSesion, destruirSesion } from "@/lib/session"
 import { registrarBitacora } from "./audit"
+import { redirect } from "next/navigation"
 
 export async function iniciarSesion(formData: FormData) {
   const email = formData.get("email") as string
@@ -54,6 +54,7 @@ export async function iniciarSesion(formData: FormData) {
 
     return { success: true }
   } catch (error) {
+    console.error("[Auth] Error en inicio de sesión:", error)
     return { error: "Error interno al conectar con la base de datos." }
   }
 }

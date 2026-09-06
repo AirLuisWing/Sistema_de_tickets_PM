@@ -50,7 +50,6 @@ export default async function PerfilPage() {
           <Card className="border-t-4 border-t-blue-800 shadow-sm dark:bg-slate-900 dark:border-x-slate-800 dark:border-b-slate-800">
             <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
               
-              {/* ESTA ES LA PARTE ARREGLADA (El componente AvatarEditable envuelve todo) */}
               <AvatarEditable urlFoto={usuario.fotoPerfil} iniciales={iniciales} />
               
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">{usuario.nombre}</h2>

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { actualizarTicket, eliminarTicket, agregarComentario, subirEvidencia, firmarConformidad } from "@/app/actions"
+import { actualizarTicket, eliminarTicket, agregarComentario, subirEvidencia, firmarConformidad } from "@/actions/tickets"
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { MessageSquare, History, Send, Clock, Paperclip, FileText, Download, Image as ImageIcon, CheckCircle, ShieldCheck } from "lucide-react"
@@ -12,6 +12,7 @@ import { getColorEstado, getColorPrioridad, cn } from "@/lib/utils"
 import AutoRefresh from "@/components/AutoRefresh"
 import BotonConfirmacion from "@/components/BotonConfirmacion"
 import FormAccion from "@/components/FormAccion"
+import BotonVolver from "@/components/BotonVolver"
 
 export const dynamic = 'force-dynamic'
 
@@ -55,12 +56,12 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
 
   return (
     <div className="p-8 max-w-7xl mx-auto space-y-6">
-      <AutoRefresh milisegundos={5000} />
+      <AutoRefresh milisegundos={10000} />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        <Link href="/dashboard/tickets">
-          <Button variant="outline" className="dark:bg-slate-900 dark:border-slate-800 dark:hover:bg-slate-800 dark:text-white">← Volver a la bandeja</Button>
-        </Link>
+        {/* Usamos el BotonVolver que mantiene el estado de la página anterior */}
+        <BotonVolver />
+        
         <div className="flex gap-2">
           {esAdmin && (
             <FormAccion action={eliminarTicket}>
@@ -289,14 +290,24 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor="tipo" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tipo</Label>
+                          {/* CLASES DEL SELECT ARREGLADAS (Las etiquetas options llevan la clase del modo oscuro) */}
                           <select id="tipo" name="tipo" defaultValue={ticket.tipo} className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 text-sm">
-                            <option value="Soporte técnico">Soporte técnico</option><option value="Incidente">Incidente</option><option value="Mantenimiento">Mantenimiento</option><option value="Instalación">Instalación</option><option value="Solicitud de acceso">Solicitud de acceso</option><option value="Requerimiento">Requerimiento</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Soporte técnico">Soporte técnico</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Incidente">Incidente</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Mantenimiento">Mantenimiento</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Instalación">Instalación</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Solicitud de acceso">Solicitud de acceso</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Requerimiento">Requerimiento</option>
                           </select>
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="prioridad" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Prioridad</Label>
-                          <select id="prioridad" name="prioridad" defaultValue={ticket.prioridad} className={cn("w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-600 text-sm font-semibold dark:bg-opacity-20", colorPrioridad)}>
-                            <option value="Baja">Baja</option><option value="Media">Media</option><option value="Alta">Alta</option><option value="Critica">Crítica</option>
+                          {/* CLASES DEL SELECT ARREGLADAS */}
+                          <select id="prioridad" name="prioridad" defaultValue={ticket.prioridad} className={cn("w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-600 text-sm font-semibold dark:bg-slate-900 dark:text-slate-200", colorPrioridad)}>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Baja">Baja</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Media">Media</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Alta">Alta</option>
+                            <option className="dark:bg-slate-900 dark:text-slate-200" value="Critica">Crítica</option>
                           </select>
                         </div>
                       </div>
@@ -330,8 +341,11 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="estado" className="font-black uppercase text-xs text-slate-700 dark:text-slate-300 tracking-wider">Estado del Ticket</Label>
-                    <select id="estado" name="estado" defaultValue={ticket.estado} className={cn("w-full p-3 border-2 rounded-md focus:ring-2 focus:ring-blue-600 font-black shadow-sm text-base dark:bg-opacity-20", colorEstado)}>
-                      <option value="Nuevo">NUEVO (Sin revisar)</option><option value="En proceso">EN PROCESO (Trabajando)</option><option value="Resuelto">RESUELTO (Cerrado)</option>
+                    {/* CLASES DEL SELECT ARREGLADAS */}
+                    <select id="estado" name="estado" defaultValue={ticket.estado} className={cn("w-full p-3 border-2 rounded-md focus:ring-2 focus:ring-blue-600 font-black shadow-sm text-base dark:bg-slate-900 dark:text-slate-200", colorEstado)}>
+                      <option className="dark:bg-slate-900 dark:text-slate-200" value="Nuevo">NUEVO (Sin revisar)</option>
+                      <option className="dark:bg-slate-900 dark:text-slate-200" value="En proceso">EN PROCESO (Trabajando)</option>
+                      <option className="dark:bg-slate-900 dark:text-slate-200" value="Resuelto">RESUELTO (Cerrado)</option>
                     </select>
                   </div>
                   <div className="space-y-2">

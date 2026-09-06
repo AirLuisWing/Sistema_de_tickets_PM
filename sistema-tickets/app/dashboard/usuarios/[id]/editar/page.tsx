@@ -6,18 +6,16 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 import { ShieldAlert, ShieldCheck, User, Wrench } from "lucide-react"
-import { actualizarUsuario } from "@/app/actions"
+import { actualizarUsuario } from "@/actions/users"
 import { redirect } from "next/navigation"
-import FormAccion from "@/components/FormAccion" // <-- IMPORTAMOS EL ESCUDO
+import FormAccion from "@/components/FormAccion" 
 
 export const dynamic = 'force-dynamic'
 
 export default async function EditarUsuarioPage({ params }: { params: Promise<{ id: string }> }) {
   const sesion = await obtenerSesion()
   
-  if (!sesion || sesion.rol !== "Administrador") {
-    redirect("/dashboard/tickets")
-  }
+  // ELIMINADA VALIDACIÓN MANUAL DE ROL "Administrador" - El middleware ahora lo maneja
 
   const { id } = await params
   
@@ -48,7 +46,6 @@ export default async function EditarUsuarioPage({ params }: { params: Promise<{ 
           </CardDescription>
         </CardHeader>
         
-        {/* CORRECCIÓN: Usamos FormAccion en lugar de form */}
         <FormAccion action={actualizarUsuario}>
           <input type="hidden" name="id" value={usuario.id} />
 

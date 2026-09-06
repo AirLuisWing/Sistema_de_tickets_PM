@@ -5,8 +5,9 @@ import bcrypt from "bcryptjs"
 import { revalidatePath } from "next/cache"
 import { obtenerSesion } from "@/lib/session"
 import { registrarBitacora } from "./audit"
-import { writeFile, mkdir } from "fs/promises"
+import { writeFile, mkdir, unlink } from "fs/promises"
 import path from "path"
+import sharp from "sharp"
 
 export async function cambiarPassword(formData: FormData) {
   const actual = formData.get("passwordActual") as string
@@ -36,6 +37,7 @@ export async function cambiarPassword(formData: FormData) {
     await registrarBitacora("Cambio de contraseña", "Perfil", `El usuario actualizó su contraseña.`, sesion.userId)
     return { success: "¡Contraseña actualizada correctamente!" }
   } catch (error) {
+    console.error("[Action: cambiarPassword] Error:", error)
     return { error: "Error interno al actualizar la contraseña." }
   }
 }
@@ -54,6 +56,7 @@ export async function actualizarPerfil(formData: FormData) {
     })
     return { success: "¡Área actualizada correctamente!" }
   } catch (error) {
+    console.error("[Action: actualizarPerfil] Error:", error)
     return { error: "Error interno al actualizar el perfil." }
   }
 }
@@ -69,16 +72,31 @@ export async function actualizarFotoPerfil(formData: FormData) {
   if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Usa JPG, PNG o WEBP." }
   
   try {
+    //LIMPIEZA: Destruir foto vieja del disco duro si existía
+    const usuarioActual = await prisma.usuario.findUnique({ where: { id: sesion.userId } })
+    if (usuarioActual?.fotoPerfil) {
+      try {
+        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil))
+      } catch (e) {
+        // Ignoramos el error si no existía el archivo
+      }
+    }
+
     const bytes = await archivo.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const extension = archivo.name.split('.').pop()
-    const nombreSeguro = `avatar_${sesion.userId}_${Date.now()}.${extension}`
+    
+    const finalBuffer = await sharp(buffer)
+      .resize({ width: 400, withoutEnlargement: true }) 
+      .webp({ quality: 80 }) 
+      .toBuffer()
+
+    const nombreSeguro = `avatar_${sesion.userId}_${Date.now()}.webp`
     const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'avatars')
     
     try { await mkdir(uploadDir, { recursive: true }) } catch(e){}
 
     const filePath = path.join(uploadDir, nombreSeguro)
-    await writeFile(filePath, buffer)
+    await writeFile(filePath, finalBuffer)
 
     await prisma.usuario.update({
       where: { id: sesion.userId },
@@ -87,7 +105,8 @@ export async function actualizarFotoPerfil(formData: FormData) {
 
     await registrarBitacora("Actualizó foto", "Perfil", "El usuario actualizó su foto de perfil.", sesion.userId)
   } catch (error) {
-    return { error: "Error en el servidor al intentar guardar la imagen." }
+    console.error("[Action: actualizarFotoPerfil] Error:", error)
+    return { error: "Error en el servidor al intentar guardar la imagen comprimida." }
   }
 
   revalidatePath("/dashboard")
@@ -99,12 +118,23 @@ export async function eliminarFotoPerfil() {
   if (!sesion) return { error: "Tu sesión ha expirado." }
 
   try {
+    //LIMPIEZA: Destruir foto del disco duro
+    const usuarioActual = await prisma.usuario.findUnique({ where: { id: sesion.userId } })
+    if (usuarioActual?.fotoPerfil) {
+      try {
+        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil))
+      } catch (e) {
+        // Ignoramos si ya se había borrado
+      }
+    }
+
     await prisma.usuario.update({
       where: { id: sesion.userId },
       data: { fotoPerfil: null } 
     })
     await registrarBitacora("Eliminó foto", "Perfil", "El usuario eliminó su foto de perfil.", sesion.userId)
   } catch (error) {
+    console.error("[Action: eliminarFotoPerfil] Error:", error)
     return { error: "Error interno al intentar eliminar la foto." }
   }
 

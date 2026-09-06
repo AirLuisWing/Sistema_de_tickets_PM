@@ -1,13 +1,15 @@
 'use server'
 
 import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client" 
 import { revalidatePath } from "next/cache"
 import { redirect } from "next/navigation" 
 import { obtenerSesion } from "@/lib/session"
 import { registrarBitacora, registrarHistorial } from "./audit"
-import { writeFile, mkdir } from "fs/promises"
+import { writeFile, mkdir, unlink } from "fs/promises"
 import path from "path"
 import { randomUUID } from "crypto"
+import sharp from "sharp"
 
 export async function crearTicket(formData: FormData) {
   const titulo = formData.get("titulo") as string 
@@ -62,7 +64,42 @@ export async function crearTicket(formData: FormData) {
     await registrarHistorial(nuevoTicket.id, "Creación de Ticket", `Ticket reportado con prioridad ${prioridad}.`, sesion.userId)
     await registrarBitacora("Creó ticket", "Tickets", `Se generó el ticket ${folioOficial}.`, sesion.userId)
 
+    // 🛡️ CORRECCIÓN: PROCESAR EL ARCHIVO ADJUNTO AL CREAR EL TICKET
+    const archivo = formData.get("archivo") as File | null
+    if (archivo && archivo.size > 0) {
+      try {
+        const bytes = await archivo.arrayBuffer()
+        const buffer = Buffer.from(bytes)
+        let finalBuffer = buffer
+        let nombreSeguro = ""
+
+        if (archivo.type.startsWith('image/')) {
+          finalBuffer = await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
+          nombreSeguro = `${randomUUID()}.webp`
+        } else {
+          nombreSeguro = `${randomUUID()}.pdf`
+        }
+
+        const uploadDir = path.join(process.cwd(), 'public', 'uploads')
+        try { await mkdir(uploadDir, { recursive: true }) } catch(e){}
+
+        const filePath = path.join(uploadDir, nombreSeguro)
+        await writeFile(filePath, finalBuffer)
+
+        await prisma.adjunto.create({
+          data: {
+            nombre: archivo.name, rutaArchivo: `/uploads/${nombreSeguro}`,
+            ticketId: nuevoTicket.id, subidoPorId: sesion.userId
+          }
+        })
+        await registrarHistorial(nuevoTicket.id, "Evidencia Agregada", `Se adjuntó evidencia inicial: ${archivo.name}`, sesion.userId)
+      } catch (err) {
+        console.error("Error guardando archivo inicial:", err)
+      }
+    }
+
   } catch (error) {
+    console.error("[Action: crearTicket] Error crítico en BD:", error) 
     return { error: "Ocurrió un error crítico al guardar el ticket en la base de datos." }
   }
 
@@ -79,11 +116,6 @@ export async function actualizarTicket(formData: FormData) {
     return { error: "El texto del dictamen es demasiado largo." }
   }
 
-  const tecnicosIdsRaw = formData.getAll("tecnicoId") 
-  const titulo = formData.get("titulo")
-  const tipo = formData.get("tipo")
-  const prioridad = formData.get("prioridad")
-
   const sesion = await obtenerSesion()
   if (!sesion) return { error: "No tienes una sesión activa." }
 
@@ -94,7 +126,11 @@ export async function actualizarTicket(formData: FormData) {
     })
 
     if (!descripcionSolucion || descripcionSolucion.trim() === "") descripcionSolucion = ""
-    const datosActualizados: any = { estado, descripcionSolucion }
+    
+    const datosActualizados: Prisma.TicketUpdateInput = { 
+      estado, 
+      descripcionSolucion 
+    }
 
     if (estado === "Resuelto" && ticketOriginal?.estado !== "Resuelto") {
       datosActualizados.fechaCierre = new Date()
@@ -102,15 +138,25 @@ export async function actualizarTicket(formData: FormData) {
       datosActualizados.fechaCierre = null
     }
     
-    const tecnicosValidos = tecnicosIdsRaw
-      .map(t => t.toString().trim())
-      .filter(t => t !== "" && t !== "null" && t !== "-- Sin asignar --")
-      .map(t => ({ id: parseInt(t) }))
+    const esAdminOSupervisor = sesion.rol === "Administrador" || sesion.rol === "Supervisor"
+    let tecnicosValidos: { id: number }[] = []
 
-    datosActualizados.tecnicos = { set: tecnicosValidos }
-    if (titulo) datosActualizados.titulo = titulo.toString()
-    if (tipo) datosActualizados.tipo = tipo.toString()
-    if (prioridad) datosActualizados.prioridad = prioridad.toString()
+    if (esAdminOSupervisor) {
+      const tecnicosIdsRaw = formData.getAll("tecnicoId") 
+      const titulo = formData.get("titulo") as string | null
+      const tipo = formData.get("tipo") as string | null
+      const prioridad = formData.get("prioridad") as string | null
+
+      tecnicosValidos = tecnicosIdsRaw
+        .map(t => t.toString().trim())
+        .filter(t => t !== "" && t !== "null" && t !== "-- Sin asignar --")
+        .map(t => ({ id: parseInt(t) }))
+
+      datosActualizados.tecnicos = { set: tecnicosValidos }
+      if (titulo) datosActualizados.titulo = titulo
+      if (tipo) datosActualizados.tipo = tipo
+      if (prioridad) datosActualizados.prioridad = prioridad
+    }
 
     await prisma.ticket.update({
       where: { id: parseInt(id) },
@@ -124,15 +170,17 @@ export async function actualizarTicket(formData: FormData) {
       }
     }
 
-    if (tecnicosValidos.length > 0 && ticketOriginal?.tecnicos.length !== tecnicosValidos.length) {
+    if (esAdminOSupervisor && tecnicosValidos.length > 0 && ticketOriginal?.tecnicos.length !== tecnicosValidos.length) {
       await registrarHistorial(parseInt(id), "Reasignación", `Se actualizaron los técnicos asignados al ticket.`, sesion.userId)
     }
 
-    if (ticketOriginal?.prioridad !== prioridad && prioridad) {
-      await registrarHistorial(parseInt(id), "Cambio de Prioridad", `La prioridad cambió a ${prioridad}.`, sesion.userId)
+    const prioridadForm = formData.get("prioridad") as string | null
+    if (esAdminOSupervisor && ticketOriginal?.prioridad !== prioridadForm && prioridadForm) {
+      await registrarHistorial(parseInt(id), "Cambio de Prioridad", `La prioridad cambió a ${prioridadForm}.`, sesion.userId)
     }
 
   } catch (error) {
+    console.error("[Action: actualizarTicket] Error:", error) 
     return { error: "Error de conexión con la base de datos al actualizar el ticket." }
   }
 
@@ -152,9 +200,29 @@ export async function eliminarTicket(formData: FormData) {
   }
 
   try {
-    await prisma.ticket.delete({ where: { id: parseInt(id) } })
-    await registrarBitacora("Eliminó ticket", "Tickets", `Se borró de forma permanente el ticket ID: ${id}.`, sesion.userId)
+    const ticketId = parseInt(id)
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      include: { adjuntos: true }
+    })
+
+    if (ticket && ticket.adjuntos.length > 0) {
+      for (const adjunto of ticket.adjuntos) {
+        try {
+          const filePath = path.join(process.cwd(), 'public', adjunto.rutaArchivo)
+          await unlink(filePath) 
+        } catch (fileError) {
+          console.error(`No se pudo borrar el archivo físico: ${adjunto.rutaArchivo}`, fileError)
+        }
+      }
+    }
+
+    await prisma.ticket.delete({ where: { id: ticketId } })
+    await registrarBitacora("Eliminó ticket", "Tickets", `Se borró de forma permanente el ticket ID: ${id} y sus archivos.`, sesion.userId)
+  
   } catch (error) {
+    console.error("[Action: eliminarTicket] Error:", error)
     return { error: "Ocurrió un error de base de datos al intentar eliminar el ticket." }
   }
 
@@ -170,11 +238,28 @@ export async function agregarComentario(formData: FormData) {
   if (!texto || texto.trim() === "") return { error: "El mensaje no puede estar vacío." }
 
   try {
+    const ticketIdNum = parseInt(ticketId)
+    // 🛡️ BLINDAJE IDOR: Verificar propiedad del ticket antes de comentar
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketIdNum }, include: { tecnicos: true } })
+    if (!ticket) return { error: "Ticket no encontrado." }
+
+    const esAdminOSupervisor = sesion.rol === "Administrador" || sesion.rol === "Supervisor"
+    const esCreador = ticket.solicitanteId === sesion.userId
+    const esTecnico = sesion.rol === "Tecnico" && ticket.tecnicos.some(t => t.id === sesion.userId)
+
+    if (!esAdminOSupervisor && !esCreador && !esTecnico) {
+      return { error: "Acceso denegado. No tienes permisos en este ticket." }
+    }
+    if (ticket.estado === "Resuelto" && !esAdminOSupervisor) {
+      return { error: "El ticket está cerrado, no se pueden agregar más comentarios." }
+    }
+
     await prisma.comentario.create({
-      data: { texto, ticketId: parseInt(ticketId), autorId: sesion.userId }
+      data: { texto, ticketId: ticketIdNum, autorId: sesion.userId }
     })
-    await registrarHistorial(parseInt(ticketId), "Nuevo Comentario", "Se agregó un mensaje al chat del ticket.", sesion.userId)
+    await registrarHistorial(ticketIdNum, "Nuevo Comentario", "Se agregó un mensaje al chat del ticket.", sesion.userId)
   } catch (error) {
+    console.error("[Action: agregarComentario] Error:", error) 
     return { error: "No se pudo enviar el mensaje." }
   }
   revalidatePath(`/dashboard/tickets/${ticketId}`)
@@ -192,26 +277,51 @@ export async function subirEvidencia(formData: FormData) {
   if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Solo JPG, PNG o PDF." }
   
   try {
+    const ticketIdNum = parseInt(ticketId)
+    // 🛡️ BLINDAJE IDOR: Verificar propiedad del ticket antes de adjuntar
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketIdNum }, include: { tecnicos: true } })
+    if (!ticket) return { error: "Ticket no encontrado." }
+
+    const esAdminOSupervisor = sesion.rol === "Administrador" || sesion.rol === "Supervisor"
+    const esCreador = ticket.solicitanteId === sesion.userId
+    const esTecnico = sesion.rol === "Tecnico" && ticket.tecnicos.some(t => t.id === sesion.userId)
+
+    if (!esAdminOSupervisor && !esCreador && !esTecnico) {
+      return { error: "Acceso denegado. No tienes permisos en este ticket." }
+    }
+    if (ticket.estado === "Resuelto" && !esAdminOSupervisor) {
+      return { error: "El ticket está cerrado, no se pueden agregar evidencias." }
+    }
+
     const bytes = await archivo.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    const extension = archivo.name.split('.').pop()
-    const nombreSeguro = `${randomUUID()}.${extension}`
+    
+    let finalBuffer = buffer
+    let nombreSeguro = ""
+
+    if (archivo.type.startsWith('image/')) {
+      finalBuffer = await sharp(buffer).resize({ width: 1200, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer()
+      nombreSeguro = `${randomUUID()}.webp`
+    } else {
+      nombreSeguro = `${randomUUID()}.pdf`
+    }
     
     const uploadDir = path.join(process.cwd(), 'public', 'uploads')
     try { await mkdir(uploadDir, { recursive: true }) } catch(e){}
 
     const filePath = path.join(uploadDir, nombreSeguro)
-    await writeFile(filePath, buffer)
+    await writeFile(filePath, finalBuffer)
 
     await prisma.adjunto.create({
       data: {
         nombre: archivo.name, rutaArchivo: `/uploads/${nombreSeguro}`,
-        ticketId: parseInt(ticketId), subidoPorId: sesion.userId
+        ticketId: ticketIdNum, subidoPorId: sesion.userId
       }
     })
-    await registrarHistorial(parseInt(ticketId), "Evidencia Agregada", `Se adjuntó el archivo: ${archivo.name}`, sesion.userId)
+    await registrarHistorial(ticketIdNum, "Evidencia Agregada", `Se adjuntó el archivo: ${archivo.name}`, sesion.userId)
   } catch (error) {
-    return { error: "Error en el servidor al intentar guardar el archivo físico." }
+    console.error("[Action: subirEvidencia] Error:", error) 
+    return { error: "Error en el servidor al intentar guardar el archivo." }
   }
   revalidatePath(`/dashboard/tickets/${ticketId}`)
 }
@@ -228,6 +338,7 @@ export async function firmarConformidad(formData: FormData) {
     })
     await registrarHistorial(parseInt(ticketId), "Firma de Conformidad", "El usuario confirmó la solución.", sesion.userId)
   } catch (error) {
+    console.error("[Action: firmarConformidad] Error:", error) 
     return { error: "Ocurrió un error al intentar registrar la firma." }
   }
   revalidatePath(`/dashboard/tickets/${ticketId}`)

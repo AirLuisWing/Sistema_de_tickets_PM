@@ -3,7 +3,7 @@
 import { useState, useRef } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Camera, Loader2, Trash2 } from "lucide-react"
-import { actualizarFotoPerfil, eliminarFotoPerfil } from "@/app/actions"
+import { actualizarFotoPerfil, eliminarFotoPerfil } from "@/actions/profile"
 
 export default function AvatarEditable({ urlFoto, iniciales }: { urlFoto?: string | null, iniciales: string }) {
   const [cargando, setCargando] = useState(false)
@@ -30,7 +30,7 @@ export default function AvatarEditable({ urlFoto, iniciales }: { urlFoto?: strin
   const handleEliminar = async (e: React.MouseEvent) => {
     e.stopPropagation() // Esto evita que se abra la ventana de Windows al hacer clic en borrar
     
-    if (!confirm("¿Estás seguro de que deseas eliminar tu foto de perfil?")) return
+    if (!window.confirm("¿Estás seguro de que deseas eliminar tu foto de perfil?")) return
 
     setCargando(true)
     const res = await eliminarFotoPerfil()

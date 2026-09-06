@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Loader2 } from "lucide-react"
-import { iniciarSesion } from "@/app/actions" 
+import { iniciarSesion } from "@/actions/auth" 
 import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
@@ -39,7 +39,7 @@ export default function LoginPage() {
       {/* Filtro oscuro (overlay) */}
       <div className="absolute inset-0 bg-slate-900/60 dark:bg-slate-950/80 z-0"></div>
       
-      {/* Tarjeta del Login con clases dark: */}
+      {/* Tarjeta del Login */}
       <Card className="w-full max-w-md bg-white dark:bg-slate-900 dark:border dark:border-slate-800 shadow-2xl border-none rounded-2xl overflow-hidden relative z-10 transition-colors">
         <CardHeader className="pb-2 pt-10">
           
@@ -49,11 +49,14 @@ export default function LoginPage() {
               alt="Escudo Policía Morelia" 
               className="h-20 w-auto object-contain" 
             />
+            
             <div className="h-14 w-px bg-slate-200 dark:bg-slate-800"></div>
+            
             <img 
               src="/tics_logo.png" 
               alt="Logo TICs" 
-              className="h-16 w-auto object-contain" 
+              /* AQUÍ ESTÁ LA MAGIA: En modo oscuro le pone un fondo blanco sutil */
+              className="h-16 w-auto object-contain transition-all duration-300 dark:bg-white/95 dark:p-1.5 dark:rounded-xl dark:shadow-sm" 
             />
           </div>
 

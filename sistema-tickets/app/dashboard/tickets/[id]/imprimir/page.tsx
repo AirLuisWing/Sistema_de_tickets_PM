@@ -24,7 +24,6 @@ export default async function ActaImpresionPage({ params }: { params: Promise<{ 
   // ==========================================
   const esAdminOSupervisor = sesion.rol === "Administrador" || sesion.rol === "Supervisor"
   
-  // <-- AQUÍ: Cambiamos tecnicoId por la validación de la lista
   const esTecnicoAsignado = sesion.rol === "Tecnico" && ticket.tecnicos.some(t => t.id === sesion.userId)
 
   // Candado 1: Los usuarios finales NO tienen acceso a esta pantalla de impresión, nunca.
