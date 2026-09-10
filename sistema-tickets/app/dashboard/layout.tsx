@@ -122,8 +122,8 @@ export default async function DashboardLayout({
             <label htmlFor="sidebar-toggle" className="cursor-pointer p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-600 dark:text-slate-300 transition-colors">
               <Menu className="h-5 w-5" />
             </label>
-
-            <form action="/dashboard/tickets" method="GET" className="relative w-full max-w-md hidden sm:block">
+            
+            <form action="/tickets/dashboard/tickets" method="GET" className="relative w-full max-w-md hidden sm:block">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-slate-400 dark:text-slate-500" />
               <Input 
                 name="buscar" 
@@ -146,7 +146,7 @@ export default async function DashboardLayout({
                 </div>
                 <Avatar className="h-9 w-9 border border-slate-200 dark:border-slate-700 shadow-sm">
                   {usuarioDB?.fotoPerfil && (
-                    <AvatarImage alt={nombreCorto} className="object-cover" src={usuarioDB.fotoPerfil} />
+                    <AvatarImage alt={nombreCorto} className="object-cover" src={`/tickets/api/archivos?path=${usuarioDB.fotoPerfil}`} />
                   )}
                   <AvatarFallback className="bg-blue-600 text-white text-sm font-bold">{iniciales}</AvatarFallback>
                 </Avatar>

@@ -14,6 +14,12 @@ export default async function DashboardPrincipalPage({ searchParams }: { searchP
   const sesion = await obtenerSesion()
   if (!sesion) redirect("/")
   
+  // 🛡️ CORRECCIÓN REDIRECCIÓN: El usuario final va directo a sus tickets.
+  // Nota: Las funciones de redirección (redirect) sí necesitan el basePath manualmente.
+  if (sesion.rol === "UsuarioFinal") {
+    redirect("/tickets/dashboard/tickets")
+  }
+  
   const resolvedParams = await searchParams
   const filtro = resolvedParams.filtro || "mes"
   const fechaEspecifica = resolvedParams.fecha

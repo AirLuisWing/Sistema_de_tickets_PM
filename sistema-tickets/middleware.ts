@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { jwtVerify } from 'jose'
 
-// 1. BLINDAJE CRÍTICO: No usamos "respaldos" en texto plano.
-// Si no hay variable de entorno, el sistema debe avisar del fallo.
 const secretKey = process.env.SESSION_SECRET
 if (!secretKey) {
   throw new Error("¡PELIGRO CRÍTICO! Falta la variable de entorno SESSION_SECRET. El sistema no puede operar de forma segura.")
@@ -18,7 +16,8 @@ export async function middleware(request: NextRequest) {
     const session = request.cookies.get('sesion_tics')?.value
 
     if (!session) {
-      return NextResponse.redirect(new URL('/', request.url))
+      // 🛡️ CORRECCIÓN: Agregamos /tickets
+      return NextResponse.redirect(new URL('/tickets/', request.url))
     }
 
     try {
@@ -38,19 +37,21 @@ export async function middleware(request: NextRequest) {
       const esRutaJefatura = rutasJefatura.some(ruta => path.startsWith(ruta))
 
       if (esRutaJefatura && rol !== "Administrador" && rol !== "Supervisor") {
-        return NextResponse.redirect(new URL('/dashboard/tickets', request.url))
+        // 🛡️ CORRECCIÓN: Agregamos /tickets
+        return NextResponse.redirect(new URL('/tickets/dashboard/tickets', request.url))
       }
 
       if (path === '/dashboard' && rol === "UsuarioFinal") {
-        return NextResponse.redirect(new URL('/dashboard/tickets', request.url))
+        // 🛡️ CORRECCIÓN: Agregamos /tickets
+        return NextResponse.redirect(new URL('/tickets/dashboard/tickets', request.url))
       }
 
       return NextResponse.next()
 
     } catch (error) {
-      // 2. REGISTRO DE CONSOLA: Saber si el token expiró o fue alterado
       console.error("[Middleware] Token rechazado o expirado:", error)
-      return NextResponse.redirect(new URL('/', request.url))
+      // 🛡️ CORRECCIÓN: Agregamos /tickets
+      return NextResponse.redirect(new URL('/tickets/', request.url))
     }
   }
 

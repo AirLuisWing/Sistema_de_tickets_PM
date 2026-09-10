@@ -21,14 +21,17 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
   const paginaActual = Number(resolvedParams.pagina) || 1
   const ITEMS_POR_PAGINA = Number(resolvedParams.limite) || 10
 
-  const whereClause = buscar ? {
-    OR: [ { nombre: { contains: buscar } }, { area: { contains: buscar } } ]
-  } : {}
+  // 🛡️ CORRECCIÓN: Forzamos a que SOLO busque usuarios con activo = true. 
+  // ¡Los eliminados desaparecerán por completo de la tabla!
+  const baseWhere: any = { activo: true }
+  
+  const whereClause = buscar 
+    ? { ...baseWhere, OR: [ { nombre: { contains: buscar } }, { area: { contains: buscar } } ] } 
+    : baseWhere
 
   const totalUsuarios = await prisma.usuario.count({ where: whereClause })
   const totalPaginas = Math.ceil(totalUsuarios / ITEMS_POR_PAGINA)
 
-  // 🛡️ CORRECCIÓN DATA LEAK: Select estricto, evita mandar contraseñas a la vista
   const usuarios = await prisma.usuario.findMany({
     where: whereClause,
     select: { id: true, nombre: true, area: true, rol: true, email: true },
@@ -54,9 +57,9 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
           <p className="text-slate-500 dark:text-slate-400 mt-1">Gestión del personal y niveles de acceso al sistema.</p>
         </div>
         {esAdmin && (
-          <a href="/dashboard/usuarios/crear" className="inline-flex items-center justify-center rounded-md text-sm font-bold bg-blue-800 hover:bg-blue-900 dark:bg-blue-700 dark:hover:bg-blue-600 text-white shadow-md h-10 px-4 py-2 transition-colors">
+          <Link href="/dashboard/usuarios/crear" className="inline-flex items-center justify-center rounded-md text-sm font-bold bg-blue-800 hover:bg-blue-900 dark:bg-blue-700 dark:hover:bg-blue-600 text-white shadow-md h-10 px-4 py-2 transition-colors">
             <UserPlus className="mr-2 h-4 w-4" /> Nuevo Usuario
-          </a>
+          </Link>
         )}
       </div>
 
@@ -86,7 +89,7 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
               </thead>
               <tbody>
                 {usuarios.length === 0 ? (
-                  <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No se encontraron usuarios.</td></tr>
+                  <tr><td colSpan={4} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">No se encontraron usuarios activos.</td></tr>
                 ) : (
                   usuarios.map((user) => (
                     <tr key={user.id} className="bg-white dark:bg-slate-900 border-b dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors">
@@ -99,8 +102,10 @@ export default async function UsuariosPage({ searchParams }: { searchParams: Pro
                       <td className="px-6 py-4 dark:text-slate-300">{user.area || 'No especificada'}</td>
                       <td className="px-6 py-4">{getRolBadge(user.rol)}</td>
                       {esAdmin && (
-                        <td className="px-6 py-4 text-right whitespace-nowrap">
-                          <a href={`/dashboard/usuarios/${user.id}/editar`} className="inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 h-9 px-3 mr-2">Editar</a>
+                        <td className="px-6 py-4 text-right whitespace-nowrap flex items-center justify-end gap-2">
+                          <Link href={`/dashboard/usuarios/${user.id}/editar`} className="inline-flex items-center justify-center rounded-md text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 h-9 px-3">
+                            Editar
+                          </Link>
                           <BotonEliminar id={user.id} nombre={user.nombre} />
                         </td>
                       )}

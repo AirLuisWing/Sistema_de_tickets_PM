@@ -33,7 +33,7 @@ export default function LoginPage() {
   return (
     <div 
       className="min-h-screen flex items-center justify-center p-4 relative bg-cover bg-center bg-no-repeat transition-colors"
-      style={{ backgroundImage: "url('/fondo-c4.jpg')" }}
+      style={{ backgroundImage: "url('/tickets/fondo-c4.jpg')" }}
     >
       
       {/* Filtro oscuro (overlay) */}
@@ -45,7 +45,7 @@ export default function LoginPage() {
           
           <div className="flex justify-center items-center gap-6 mb-6">
             <img 
-              src="/logo-tics.png" 
+              src="/tickets/logo-tics.png" 
               alt="Escudo Policía Morelia" 
               className="h-20 w-auto object-contain" 
             />
@@ -53,7 +53,7 @@ export default function LoginPage() {
             <div className="h-14 w-px bg-slate-200 dark:bg-slate-800"></div>
             
             <img 
-              src="/tics_logo.png" 
+              src="/tickets/tics_logo.png" 
               alt="Logo TICs" 
               /* AQUÍ ESTÁ LA MAGIA: En modo oscuro le pone un fondo blanco sutil */
               className="h-16 w-auto object-contain transition-all duration-300 dark:bg-white/95 dark:p-1.5 dark:rounded-xl dark:shadow-sm" 
@@ -80,12 +80,12 @@ export default function LoginPage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="font-bold text-slate-700 dark:text-slate-300">Correo electrónico</Label>
+              <Label htmlFor="email" className="font-bold text-slate-700 dark:text-slate-300">Usuario</Label>
               <Input 
                 id="email" 
                 name="email" 
                 type="email" 
-                placeholder="@policiamorelia.gob.mx" 
+                placeholder="usuario@..." 
                 required 
                 className="h-12 border-slate-300 dark:border-slate-700 focus-visible:ring-blue-800 bg-white/50 dark:bg-slate-950 focus:bg-white dark:focus:bg-slate-900 dark:text-white dark:placeholder:text-slate-600 transition-colors"
                 autoComplete="email"

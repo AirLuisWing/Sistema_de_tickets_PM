@@ -63,7 +63,7 @@ export default async function EditarUsuarioPage({ params }: { params: Promise<{ 
               </div>
 
               <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="email" className="font-semibold text-slate-700 dark:text-slate-300">Correo Electrónico / Usuario</Label>
+                <Label htmlFor="email" className="font-semibold text-slate-700 dark:text-slate-300">Usuario</Label>
                 <Input id="email" name="email" type="email" defaultValue={usuario.email} required className="dark:bg-slate-950 dark:border-slate-700 dark:text-white" />
               </div>
             </div>

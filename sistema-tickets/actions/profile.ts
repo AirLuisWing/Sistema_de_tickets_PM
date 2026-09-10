@@ -68,15 +68,20 @@ export async function actualizarFotoPerfil(formData: FormData) {
   if (!sesion) return { error: "Tu sesión ha expirado." }
   if (!archivo || archivo.size === 0) return { error: "No seleccionaste ninguna imagen." }
 
+  // 🛡️ BLINDAJE OOM (Out Of Memory): Límite de 5 MB
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB en bytes
+  if (archivo.size > MAX_FILE_SIZE) {
+    return { error: "El archivo es demasiado grande. El límite es de 5 MB." }
+  }
+
   const permitidos = ['image/jpeg', 'image/png', 'image/webp']
   if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Usa JPG, PNG o WEBP." }
   
   try {
-    //LIMPIEZA: Destruir foto vieja del disco duro si existía
     const usuarioActual = await prisma.usuario.findUnique({ where: { id: sesion.userId } })
     if (usuarioActual?.fotoPerfil) {
       try {
-        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil))
+        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil.replace('/tickets', '')))
       } catch (e) {
         // Ignoramos el error si no existía el archivo
       }
@@ -118,11 +123,10 @@ export async function eliminarFotoPerfil() {
   if (!sesion) return { error: "Tu sesión ha expirado." }
 
   try {
-    //LIMPIEZA: Destruir foto del disco duro
     const usuarioActual = await prisma.usuario.findUnique({ where: { id: sesion.userId } })
     if (usuarioActual?.fotoPerfil) {
       try {
-        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil))
+        await unlink(path.join(process.cwd(), 'public', usuarioActual.fotoPerfil.replace('/tickets', '')))
       } catch (e) {
         // Ignoramos si ya se había borrado
       }

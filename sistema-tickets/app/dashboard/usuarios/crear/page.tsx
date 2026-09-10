@@ -66,8 +66,8 @@ export default function CrearUsuarioPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="font-semibold text-slate-700 dark:text-slate-300">Correo Electrónico / Usuario</Label>
-                <Input id="email" name="email" type="email" placeholder="usuario@policiamorelia.gob.mx" required className="dark:bg-slate-950 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-600" />
+                <Label htmlFor="email" className="font-semibold text-slate-700 dark:text-slate-300">Usuario@</Label>
+                <Input id="email" name="email" type="email" placeholder="usuario@" required className="dark:bg-slate-950 dark:border-slate-700 dark:text-white dark:placeholder:text-slate-600" />
               </div>
 
               <div className="space-y-2">

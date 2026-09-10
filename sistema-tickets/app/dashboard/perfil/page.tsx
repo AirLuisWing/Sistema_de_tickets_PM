@@ -50,7 +50,11 @@ export default async function PerfilPage() {
           <Card className="border-t-4 border-t-blue-800 shadow-sm dark:bg-slate-900 dark:border-x-slate-800 dark:border-b-slate-800">
             <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
               
-              <AvatarEditable urlFoto={usuario.fotoPerfil} iniciales={iniciales} />
+              {/* 🛡️ CORRECCIÓN: Usamos la API segura para mostrar la foto */}
+              <AvatarEditable 
+                urlFoto={usuario.fotoPerfil ? `/tickets/api/archivos?path=${usuario.fotoPerfil}` : null} 
+                iniciales={iniciales} 
+              />
               
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">{usuario.nombre}</h2>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200 mt-2 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800">

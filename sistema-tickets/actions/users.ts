@@ -21,7 +21,7 @@ export async function registrarUsuario(formData: FormData) {
 
   try {
     const usuarioExistente = await prisma.usuario.findUnique({ where: { email: email } })
-    if (usuarioExistente) return { error: "El correo electrónico ya está registrado." }
+    if (usuarioExistente) return { error: "El Usuario ya está registrado." }
 
     const hashedPassword = await bcrypt.hash(password, 10)
 

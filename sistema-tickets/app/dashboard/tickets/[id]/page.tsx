@@ -47,7 +47,14 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
 
   let listaTecnicos: any[] = []
   if (esAdminOSupervisor) {
-    listaTecnicos = await prisma.usuario.findMany({ where: { rol: "Tecnico" }, select: { id: true, nombre: true } })
+    // 🛡️ CORRECCIÓN: Filtramos a los técnicos zombies pidiendo solo los activos
+    listaTecnicos = await prisma.usuario.findMany({ 
+      where: { 
+        rol: "Tecnico",
+        activo: true // <-- ¡Aquí está el blindaje!
+      }, 
+      select: { id: true, nombre: true } 
+    })
   }
 
   const folioMostrar = ticket.folio || `#TIC-${ticket.id.toString().padStart(4, '0')}`
@@ -59,7 +66,6 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
       <AutoRefresh milisegundos={10000} />
       
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
-        {/* Usamos el BotonVolver que mantiene el estado de la página anterior */}
         <BotonVolver />
         
         <div className="flex gap-2">
@@ -180,7 +186,14 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                     <p className="text-sm text-slate-400 italic col-span-2">No hay archivos adjuntos en este ticket.</p>
                   ) : (
                     ticket.adjuntos.map(adjunto => (
-                      <a key={adjunto.id} href={adjunto.rutaArchivo} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shadow-sm group">
+                      <a 
+                        key={adjunto.id} 
+                        href={`/tickets/api/archivos?path=${encodeURIComponent(adjunto.rutaArchivo)}`} 
+                        download={adjunto.nombre}
+                        target="_blank" 
+                        rel="noreferrer" 
+                        className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-900 transition-colors shadow-sm group"
+                      >
                         <div className="bg-white dark:bg-slate-800 p-2 rounded-md shadow-sm border border-slate-100 dark:border-slate-700 text-blue-600 dark:text-blue-400">
                           {adjunto.nombre.endsWith('.pdf') ? <FileText className="h-5 w-5" /> : <ImageIcon className="h-5 w-5" />}
                         </div>
@@ -290,7 +303,6 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
                           <Label htmlFor="tipo" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Tipo</Label>
-                          {/* CLASES DEL SELECT ARREGLADAS (Las etiquetas options llevan la clase del modo oscuro) */}
                           <select id="tipo" name="tipo" defaultValue={ticket.tipo} className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded-md bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:ring-2 focus:ring-blue-600 text-sm">
                             <option className="dark:bg-slate-900 dark:text-slate-200" value="Soporte técnico">Soporte técnico</option>
                             <option className="dark:bg-slate-900 dark:text-slate-200" value="Incidente">Incidente</option>
@@ -302,7 +314,6 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                         </div>
                         <div className="space-y-2">
                           <Label htmlFor="prioridad" className="text-xs font-semibold text-slate-700 dark:text-slate-300">Prioridad</Label>
-                          {/* CLASES DEL SELECT ARREGLADAS */}
                           <select id="prioridad" name="prioridad" defaultValue={ticket.prioridad} className={cn("w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-600 text-sm font-semibold dark:bg-slate-900 dark:text-slate-200", colorPrioridad)}>
                             <option className="dark:bg-slate-900 dark:text-slate-200" value="Baja">Baja</option>
                             <option className="dark:bg-slate-900 dark:text-slate-200" value="Media">Media</option>
@@ -341,7 +352,6 @@ export default async function DetalleTicketPage({ params }: { params: Promise<{ 
                   )}
                   <div className="space-y-2">
                     <Label htmlFor="estado" className="font-black uppercase text-xs text-slate-700 dark:text-slate-300 tracking-wider">Estado del Ticket</Label>
-                    {/* CLASES DEL SELECT ARREGLADAS */}
                     <select id="estado" name="estado" defaultValue={ticket.estado} className={cn("w-full p-3 border-2 rounded-md focus:ring-2 focus:ring-blue-600 font-black shadow-sm text-base dark:bg-slate-900 dark:text-slate-200", colorEstado)}>
                       <option className="dark:bg-slate-900 dark:text-slate-200" value="Nuevo">NUEVO (Sin revisar)</option>
                       <option className="dark:bg-slate-900 dark:text-slate-200" value="En proceso">EN PROCESO (Trabajando)</option>

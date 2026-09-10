@@ -64,9 +64,17 @@ export async function crearTicket(formData: FormData) {
     await registrarHistorial(nuevoTicket.id, "Creación de Ticket", `Ticket reportado con prioridad ${prioridad}.`, sesion.userId)
     await registrarBitacora("Creó ticket", "Tickets", `Se generó el ticket ${folioOficial}.`, sesion.userId)
 
-    // 🛡️ CORRECCIÓN: PROCESAR EL ARCHIVO ADJUNTO AL CREAR EL TICKET
     const archivo = formData.get("archivo") as File | null
+    
+    // 🛡️ CORRECCIÓN: Comprobamos que el archivo existe ANTES de leer su tamaño
     if (archivo && archivo.size > 0) {
+      
+      // 🛡️ BLINDAJE OOM: Límite de 20MB
+      const MAX_FILE_SIZE = 20 * 1024 * 1024; 
+      if (archivo.size > MAX_FILE_SIZE) {
+        return { error: "El archivo es demasiado grande. El límite para evidencias es de 20 MB." }
+      }
+
       try {
         const bytes = await archivo.arrayBuffer()
         const buffer = Buffer.from(bytes)
@@ -207,10 +215,16 @@ export async function eliminarTicket(formData: FormData) {
       include: { adjuntos: true }
     })
 
-    if (ticket && ticket.adjuntos.length > 0) {
+    if (!ticket) {
+        return { error: "El ticket que intentas eliminar ya no existe." }
+    }
+
+    if (ticket.adjuntos.length > 0) {
       for (const adjunto of ticket.adjuntos) {
         try {
-          const filePath = path.join(process.cwd(), 'public', adjunto.rutaArchivo)
+          const rutaRelativa = adjunto.rutaArchivo.replace(/^\/uploads\//, '')
+          const filePath = path.join(process.cwd(), 'public', 'uploads', rutaRelativa)
+          
           await unlink(filePath) 
         } catch (fileError) {
           console.error(`No se pudo borrar el archivo físico: ${adjunto.rutaArchivo}`, fileError)
@@ -239,7 +253,6 @@ export async function agregarComentario(formData: FormData) {
 
   try {
     const ticketIdNum = parseInt(ticketId)
-    // 🛡️ BLINDAJE IDOR: Verificar propiedad del ticket antes de comentar
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketIdNum }, include: { tecnicos: true } })
     if (!ticket) return { error: "Ticket no encontrado." }
 
@@ -273,12 +286,17 @@ export async function subirEvidencia(formData: FormData) {
   if (!sesion) return { error: "Tu sesión ha expirado." }
   if (!archivo || archivo.size === 0) return { error: "No se adjuntó ningún archivo válido." }
 
-  const permitidos = ['image/jpeg', 'image/png', 'application/pdf']
-  if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Solo JPG, PNG o PDF." }
+  // 🛡️ BLINDAJE OOM: Límite de 20MB
+  const MAX_FILE_SIZE = 20 * 1024 * 1024;
+  if (archivo.size > MAX_FILE_SIZE) {
+    return { error: "El archivo es demasiado grande. El límite para evidencias es de 20 MB." }
+  }
+
+  const permitidos = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf']
+  if (!permitidos.includes(archivo.type)) return { error: "Formato no permitido. Solo imágenes o PDF." }
   
   try {
     const ticketIdNum = parseInt(ticketId)
-    // 🛡️ BLINDAJE IDOR: Verificar propiedad del ticket antes de adjuntar
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketIdNum }, include: { tecnicos: true } })
     if (!ticket) return { error: "Ticket no encontrado." }
 
