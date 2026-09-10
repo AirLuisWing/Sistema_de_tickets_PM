@@ -7,12 +7,10 @@ import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { AlertCircle, Loader2 } from "lucide-react"
 import { iniciarSesion } from "@/actions/auth" 
-import { useRouter } from "next/navigation"
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [cargando, setCargando] = useState(false)
-  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -22,12 +20,11 @@ export default function LoginPage() {
     const formData = new FormData(e.currentTarget)
     const respuesta = await iniciarSesion(formData)
     
+    // Si hay error lo mostramos. Si es correcto, el Server Action nos redirigirá automáticamente.
     if (respuesta?.error) {
       setError(respuesta.error)
       setCargando(false)
-    } else if (respuesta?.success) {
-      router.push("/dashboard")
-    }
+    } 
   }
 
   return (

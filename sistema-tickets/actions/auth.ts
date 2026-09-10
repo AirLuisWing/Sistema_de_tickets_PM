@@ -52,11 +52,14 @@ export async function iniciarSesion(formData: FormData) {
     await crearSesion(usuario.id, usuario.rol)
     await registrarBitacora("Inicio de sesión", "Autenticación", `El usuario ingresó al sistema exitosamente.`, usuario.id)
 
-    return { success: true }
   } catch (error) {
     console.error("[Auth] Error en inicio de sesión:", error)
     return { error: "Error interno al conectar con la base de datos." }
   }
+
+  // ✅ CORRECCIÓN CRÍTICA: El redirect debe ir SIEMPRE fuera del bloque try/catch
+  // Next.js automáticamente le agregará el prefijo "/tickets"
+  redirect("/dashboard")
 }
 
 export async function cerrarSesion() {

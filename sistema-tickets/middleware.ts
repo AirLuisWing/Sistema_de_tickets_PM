@@ -16,8 +16,9 @@ export async function middleware(request: NextRequest) {
     const session = request.cookies.get('sesion_tics')?.value
 
     if (!session) {
-      // 🛡️ CORRECCIÓN: Agregamos /tickets
-      return NextResponse.redirect(new URL('/tickets/', request.url))
+      const url = request.nextUrl.clone()
+      url.pathname = '/' // Next.js le agregará el /tickets automáticamente
+      return NextResponse.redirect(url)
     }
 
     try {
@@ -37,21 +38,24 @@ export async function middleware(request: NextRequest) {
       const esRutaJefatura = rutasJefatura.some(ruta => path.startsWith(ruta))
 
       if (esRutaJefatura && rol !== "Administrador" && rol !== "Supervisor") {
-        // 🛡️ CORRECCIÓN: Agregamos /tickets
-        return NextResponse.redirect(new URL('/tickets/dashboard/tickets', request.url))
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard/tickets'
+        return NextResponse.redirect(url)
       }
 
       if (path === '/dashboard' && rol === "UsuarioFinal") {
-        // 🛡️ CORRECCIÓN: Agregamos /tickets
-        return NextResponse.redirect(new URL('/tickets/dashboard/tickets', request.url))
+        const url = request.nextUrl.clone()
+        url.pathname = '/dashboard/tickets'
+        return NextResponse.redirect(url)
       }
 
       return NextResponse.next()
 
     } catch (error) {
       console.error("[Middleware] Token rechazado o expirado:", error)
-      // 🛡️ CORRECCIÓN: Agregamos /tickets
-      return NextResponse.redirect(new URL('/tickets/', request.url))
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
     }
   }
 
