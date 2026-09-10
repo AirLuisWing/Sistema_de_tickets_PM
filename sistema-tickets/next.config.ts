@@ -1,11 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  basePath: '/tickets', // <-- ESTA ES LA MAGIA PARA EL PREFIJO
-  output: 'standalone', // <-- Súper optimización para Docker
+  basePath: '/tickets', 
+  output: 'standalone', 
+  
+  // 🛡️ CORRECCIÓN: Lo regresamos a 'experimental' para que TypeScript sea feliz
   experimental: {
     serverActions: {
-      bodySizeLimit: '10mb',
+      bodySizeLimit: '20mb', 
+      allowedOrigins: ["localhost:4001", "10.1.0.160:4001"] 
     },
   },
 };
