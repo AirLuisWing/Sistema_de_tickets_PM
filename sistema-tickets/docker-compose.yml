@@ -9,7 +9,6 @@ services:
       MYSQL_DATABASE: sistematic_db
       MYSQL_USER: tics_user
       MYSQL_PASSWORD: tics_password
-      # Aquí sí va con dos puntos porque las de arriba no tienen guion
       TZ: America/Mexico_City
     ports:
       - "3307:3306"
@@ -21,6 +20,9 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    # 🛡️ NUEVO: Conectamos la BD a la red externa
+    networks:
+      - sgc_default
 
   app-tickets:
     build: .
@@ -31,15 +33,23 @@ services:
       - DATABASE_URL=mysql://tics_user:tics_password@db-tickets:3306/sistematic_db
       - SESSION_SECRET=secreto-super-seguro-policia-morelia-2026
       - PORT=4001
-      # 🛡️ CORRECCIÓN: Aquí lleva guion e igual ( - VARIABLE=VALOR )
       - TZ=America/Mexico_City
+      - ALLOWED_ORIGINS=localhost:4001,10.1.0.160:4001
     depends_on:
       db-tickets:
         condition: service_healthy
     volumes:
       - tickets_archivos:/app/public/uploads
     restart: unless-stopped
+    # 🛡️ NUEVO: Conectamos la App a la red externa
+    networks:
+      - sgc_default
 
 volumes:
   tickets_mysql_data:
   tickets_archivos:
+
+# 🛡️ NUEVO: Declaramos que la red sgc_default ya existe en el servidor
+networks:
+  sgc_default:
+    external: true
