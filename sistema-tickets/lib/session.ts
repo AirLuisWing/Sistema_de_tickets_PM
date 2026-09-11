@@ -20,7 +20,8 @@ export async function crearSesion(userId: number, rol: string) {
   
   cookieStore.set("sesion_tics", session, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // ✅ CORRECCIÓN CRÍTICA: Permitir cookies en HTTP local (IP del servidor)
+    secure: false, 
     expires: expiresAt,
     sameSite: "lax",
     path: "/",
